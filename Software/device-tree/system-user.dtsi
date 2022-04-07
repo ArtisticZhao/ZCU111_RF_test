@@ -1,0 +1,11 @@
+/include/ "system-conf.dtsi"
+#include "zcu111.dtsi"
+/ {
+	dma_proxy {  
+	  compatible ="xlnx,dma_proxy";
+	  dmas = <&axi_dma_0 0  &axi_dma_0 1>;
+	  dma-names = "dma_proxy_tx", "dma_proxy_rx";  
+	  dma-coherent;
+	} ;
+};
+
