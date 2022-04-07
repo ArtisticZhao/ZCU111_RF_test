@@ -12,6 +12,7 @@
   - device-tree 设备树文件
   - dma-proxy   Kernel driver module
   - dma-sender  Linux user application.
+  - bootscript_300  将ZCU111板载RF ref clock配置到300MHz，脚本要求rootfs添加i2ctools
 
 ## Usage
 
@@ -34,3 +35,4 @@
 ## Refs
 
 [Linux DMA From User Space 2.0](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/1027702787/Linux+DMA+From+User+Space+2.0)
+[Programming Clocks on the ZCU111](https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/84541826/Programming+Clocks+on+the+ZCU111)
