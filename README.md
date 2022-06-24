@@ -18,13 +18,11 @@
 
 ### 创建Vivado工程
 
-创建Vivado工程，选择器件为“Board ZCU111”
+在Vivado TCL控制台中一键创建工程和Block Design！
 
-添加QPSK_data_converter.v 和 Repeater.v 到工程中。
-
-创建空白Block Design
-
-在TCL console中 `source zynq_dma_qpsk_tx_10Mbps.tcl` 自动绘制Block Design
+```
+source ./create_project.tcl
+```
 
 ### 创建Petalinux工程
 

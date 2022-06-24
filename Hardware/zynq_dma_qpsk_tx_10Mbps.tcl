@@ -37,13 +37,6 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 # To test this script, run the following commands from Vivado Tcl console:
 # source design_1_script.tcl
 
-
-# The design that will be created by this Tcl script contains the following 
-# module references:
-# QPSK_data_converter, Repeater
-
-# Please add the sources of those modules before sourcing this Tcl script.
-
 # If there is no project opened, this script will create a
 # project, but make sure you do not have an existing project
 # <./myproj/project_1.xpr> in the current working folder.
@@ -131,13 +124,13 @@ set bCheckIPsPassed 1
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
+by2hit.net:user:QPSK_Mod:1.0\
 xilinx.com:ip:xlconstant:1.1\
 xilinx.com:ip:axi_dma:7.1\
 xilinx.com:ip:smartconnect:1.0\
 xilinx.com:ip:axis_data_fifo:2.0\
 xilinx.com:ip:axis_dwidth_converter:1.1\
 xilinx.com:ip:clk_wiz:6.0\
-xilinx.com:ip:ila:6.2\
 xilinx.com:ip:fir_compiler:7.2\
 xilinx.com:ip:proc_sys_reset:5.0\
 xilinx.com:ip:usp_rf_data_converter:2.1\
@@ -161,32 +154,6 @@ xilinx.com:ip:zynq_ultra_ps_e:3.3\
       set bCheckIPsPassed 0
    }
 
-}
-
-##################################################################
-# CHECK Modules
-##################################################################
-set bCheckModules 1
-if { $bCheckModules == 1 } {
-   set list_check_mods "\ 
-QPSK_data_converter\
-Repeater\
-"
-
-   set list_mods_missing ""
-   common::send_msg_id "BD_TCL-006" "INFO" "Checking if the following modules exist in the project's sources: $list_check_mods ."
-
-   foreach mod_vlnv $list_check_mods {
-      if { [can_resolve_reference $mod_vlnv] == 0 } {
-         lappend list_mods_missing $mod_vlnv
-      }
-   }
-
-   if { $list_mods_missing ne "" } {
-      catch {common::send_msg_id "BD_TCL-115" "ERROR" "The following module(s) are not found in the project: $list_mods_missing" }
-      common::send_msg_id "BD_TCL-008" "INFO" "Please add source files for the missing module(s) above."
-      set bCheckIPsPassed 0
-   }
 }
 
 if { $bCheckIPsPassed != 1 } {
@@ -247,30 +214,11 @@ proc create_root_design { parentCell } {
   set almost_empty [ create_bd_port -dir O almost_empty ]
   set almost_full [ create_bd_port -dir O almost_full ]
 
-  # Create instance: QPSK_data_converter_0, and set properties
-  set block_name QPSK_data_converter
-  set block_cell_name QPSK_data_converter_0
-  if { [catch {set QPSK_data_converter_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
-     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   } elseif { $QPSK_data_converter_0 eq "" } {
-     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   }
-  
-  # Create instance: Repeater_0, and set properties
-  set block_name Repeater
-  set block_cell_name Repeater_0
-  if { [catch {set Repeater_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
-     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   } elseif { $Repeater_0 eq "" } {
-     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
-     return 1
-   }
-    set_property -dict [ list \
-   CONFIG.N {5} \
- ] $Repeater_0
+  # Create instance: QPSK_Mod_0, and set properties
+  set QPSK_Mod_0 [ create_bd_cell -type ip -vlnv by2hit.net:user:QPSK_Mod:1.0 QPSK_Mod_0 ]
+  set_property -dict [ list \
+   CONFIG.sps {15} \
+ ] $QPSK_Mod_0
 
   # Create instance: axcache_coherent, and set properties
   set axcache_coherent [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 axcache_coherent ]
@@ -319,31 +267,23 @@ proc create_root_design { parentCell } {
    CONFIG.CONST_WIDTH {3} \
  ] $axprot_unsecure
 
-  # Create instance: dac1_clk_wiz, and set properties
-  set dac1_clk_wiz [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 dac1_clk_wiz ]
+  # Create instance: dac_pll_75M, and set properties
+  set dac_pll_75M [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 dac_pll_75M ]
   set_property -dict [ list \
-   CONFIG.CLKOUT1_JITTER {319.196} \
-   CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {25} \
-   CONFIG.MMCM_CLKOUT0_DIVIDE_F {48.125} \
-   CONFIG.PRIM_IN_FREQ {15.625} \
+   CONFIG.CLKIN1_JITTER_PS {213.32999999999998} \
+   CONFIG.CLKOUT1_JITTER {148.994} \
+   CONFIG.CLKOUT1_PHASE_ERROR {157.262} \
+   CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {75} \
+   CONFIG.MMCM_CLKFBOUT_MULT_F {26.000} \
+   CONFIG.MMCM_CLKIN1_PERIOD {21.333} \
+   CONFIG.MMCM_CLKIN2_PERIOD {10.0} \
+   CONFIG.MMCM_CLKOUT0_DIVIDE_F {16.250} \
+   CONFIG.MMCM_DIVCLK_DIVIDE {1} \
    CONFIG.RESET_BOARD_INTERFACE {reset} \
    CONFIG.USE_BOARD_FLOW {true} \
+   CONFIG.USE_LOCKED {true} \
    CONFIG.USE_RESET {false} \
- ] $dac1_clk_wiz
-
-  # Create instance: ila_1, and set properties
-  set ila_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_1 ]
-  set_property -dict [ list \
-   CONFIG.C_NUM_OF_PROBES {9} \
-   CONFIG.C_SLOT_0_AXI_PROTOCOL {AXI4S} \
- ] $ila_1
-
-  # Create instance: ila_2, and set properties
-  set ila_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:ila:6.2 ila_2 ]
-  set_property -dict [ list \
-   CONFIG.C_NUM_OF_PROBES {9} \
-   CONFIG.C_SLOT_0_AXI_PROTOCOL {AXI4S} \
- ] $ila_2
+ ] $dac_pll_75M
 
   # Create instance: ps8_0_axi_periph, and set properties
   set ps8_0_axi_periph [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 ps8_0_axi_periph ]
@@ -355,14 +295,16 @@ proc create_root_design { parentCell } {
   set pulse_shaping_filter [ create_bd_cell -type ip -vlnv xilinx.com:ip:fir_compiler:7.2 pulse_shaping_filter ]
   set_property USER_COMMENTS.comment_0 "x5 interpolation" [get_bd_cells /pulse_shaping_filter]
   set_property -dict [ list \
+   CONFIG.BestPrecision {true} \
    CONFIG.Clock_Frequency {300.0} \
-   CONFIG.CoefficientVector {0.00060376,0.0023763,0.0042877,0.0042126,-2.5988e-18,-0.0088264,-0.019625,-0.026479,-0.0219,6.1232e-18,0.04015,0.092677,0.14578,0.18535,0.2,0.18535,0.14578,0.092677,0.04015,6.1232e-18,-0.0219,-0.026479,-0.019625,-0.0088264,-2.5988e-18,0.0042126,0.0042877,0.0023763,0.00060376} \
-   CONFIG.Coefficient_Fractional_Bits {17} \
+   CONFIG.CoefficientVector {0.00020567,0.00015915,9.8732e-05,2.8663e-05,-4.5925e-05,-0.00011937,-0.00018591,-0.00024013,-0.00027744,-0.00029443,-0.00028917,-0.00026149,-0.00021297,-0.0001469,-6.8109e-05,1.7396e-05,0.00010287,0.00018134,0.00024614,0.00029149,0.00031299,0.00030801,0.00027596,0.0002185,0.0001394,4.4407e-05,-5.919e-05,-0.00016304,-0.00025838,-0.00033671,-0.00039048,-0.00041378,-0.00040286,-0.00035655,-0.00027646,-0.00016705,-3.5361e-05,0.00010939,0.00025644,0.00039422,0.00051126,0.00059711,0.00064319,0.00064356,0.00059556,0.00050018,0.00036215,0.00018981,-5.389e-06,-0.00020959,-0.00040752,-0.00058358,-0.0007231,-0.0008135,-0.00084546,-0.00081381,-0.00071817,-0.00056332,-0.00035907,-0.00011985,0.0001362,0.0003884,0.00061503,0.00079502,0.00090967,0.00094434,0.00088994,0.00074409,0.00051188,0.00020608,-0.0001532,-0.00053943,-0.00092122,-0.0012642,-0.0015337,-0.0016969,-0.0017261,-0.0016009,-0.0013107,-0.00085666,-0.0002525,0.0004749,0.0012861,0.0021305,0.0029488,0.0036762,0.0042461,0.0045945,0.0046648,0.0044122,0.003808,0.0028431,0.0015313,-8.9635e-05,-0.0019572,-0.0039852,-0.0060663,-0.0080756,-0.0098763,-0.011325,-0.01228,-0.012606,-0.012187,-0.010925,-0.0087553,-0.005646,-0.0016039,0.0033238,0.0090491,0.015445,0.022349,0.029569,0.036891,0.044085,0.050917,0.057159,0.062597,0.067042,0.070335,0.072359,0.073042,0.072359,0.070335,0.067042,0.062597,0.057159,0.050917,0.044085,0.036891,0.029569,0.022349,0.015445,0.0090491,0.0033238,-0.0016039,-0.005646,-0.0087553,-0.010925,-0.012187,-0.012606,-0.01228,-0.011325,-0.0098763,-0.0080756,-0.0060663,-0.0039852,-0.0019572,-8.9635e-05,0.0015313,0.0028431,0.003808,0.0044122,0.0046648,0.0045945,0.0042461,0.0036762,0.0029488,0.0021305,0.0012861,0.0004749,-0.0002525,-0.00085666,-0.0013107,-0.0016009,-0.0017261,-0.0016969,-0.0015337,-0.0012642,-0.00092122,-0.00053943,-0.0001532,0.00020608,0.00051188,0.00074409,0.00088994,0.00094434,0.00090967,0.00079502,0.00061503,0.0003884,0.0001362,-0.00011985,-0.00035907,-0.00056332,-0.00071817,-0.00081381,-0.00084546,-0.0008135,-0.0007231,-0.00058358,-0.00040752,-0.00020959,-5.389e-06,0.00018981,0.00036215,0.00050018,0.00059556,0.00064356,0.00064319,0.00059711,0.00051126,0.00039422,0.00025644,0.00010939,-3.5361e-05,-0.00016705,-0.00027646,-0.00035655,-0.00040286,-0.00041378,-0.00039048,-0.00033671,-0.00025838,-0.00016304,-5.919e-05,4.4407e-05,0.0001394,0.0002185,0.00027596,0.00030801,0.00031299,0.00029149,0.00024614,0.00018134,0.00010287,1.7396e-05,-6.8109e-05,-0.0001469,-0.00021297,-0.00026149,-0.00028917,-0.00029443,-0.00027744,-0.00024013,-0.00018591,-0.00011937,-4.5925e-05,2.8663e-05,9.8732e-05,0.00015915,0.00020567} \
+   CONFIG.Coefficient_Fractional_Bits {18} \
    CONFIG.Coefficient_Sets {1} \
    CONFIG.Coefficient_Sign {Signed} \
    CONFIG.Coefficient_Structure {Inferred} \
    CONFIG.Coefficient_Width {16} \
-   CONFIG.ColumnConfig {6} \
+   CONFIG.ColumnConfig {49} \
+   CONFIG.Data_Width {16} \
    CONFIG.Decimation_Rate {1} \
    CONFIG.Filter_Architecture {Systolic_Multiply_Accumulate} \
    CONFIG.Filter_Type {Interpolation} \
@@ -382,8 +324,8 @@ proc create_root_design { parentCell } {
   # Create instance: rst_ps8_0_99M, and set properties
   set rst_ps8_0_99M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps8_0_99M ]
 
-  # Create instance: rst_ps8_25M, and set properties
-  set rst_ps8_25M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps8_25M ]
+  # Create instance: rst_ps8_75M, and set properties
+  set rst_ps8_75M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps8_75M ]
 
   # Create instance: usp_rf_data_converter_0, and set properties
   set usp_rf_data_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:usp_rf_data_converter:2.1 usp_rf_data_converter_0 ]
@@ -397,17 +339,18 @@ proc create_root_design { parentCell } {
    CONFIG.ADC_Slice00_Enable {false} \
    CONFIG.ADC_Slice01_Enable {false} \
    CONFIG.DAC1_Enable {1} \
-   CONFIG.DAC1_Fabric_Freq {25.000} \
-   CONFIG.DAC1_Outclk_Freq {15.625} \
+   CONFIG.DAC1_Fabric_Freq {75.000} \
+   CONFIG.DAC1_Outclk_Freq {46.875} \
    CONFIG.DAC1_PLL_Enable {true} \
    CONFIG.DAC1_Refclk_Freq {300.000} \
-   CONFIG.DAC1_Sampling_Rate {0.5} \
+   CONFIG.DAC1_Sampling_Rate {1.5} \
    CONFIG.DAC_Data_Width10 {10} \
    CONFIG.DAC_Interpolation_Mode10 {4} \
    CONFIG.DAC_Invsinc_Ctrl10 {true} \
    CONFIG.DAC_Mixer_Mode10 {0} \
    CONFIG.DAC_Mixer_Type10 {2} \
    CONFIG.DAC_NCO_Freq10 {1.2} \
+   CONFIG.DAC_Neg_Quadrature10 {true} \
    CONFIG.DAC_Nyquist10 {1} \
    CONFIG.DAC_Slice10_Enable {true} \
  ] $usp_rf_data_converter_0
@@ -1094,16 +1037,14 @@ proc create_root_design { parentCell } {
  ] $zynq_ultra_ps_e_0
 
   # Create interface connections
-  connect_bd_intf_net -intf_net QPSK_data_converter_0_out [get_bd_intf_pins QPSK_data_converter_0/out] [get_bd_intf_pins Repeater_0/in]
-connect_bd_intf_net -intf_net [get_bd_intf_nets QPSK_data_converter_0_out] [get_bd_intf_pins Repeater_0/in] [get_bd_intf_pins ila_1/SLOT_0_AXIS]
-  connect_bd_intf_net -intf_net Repeater_0_out [get_bd_intf_pins Repeater_0/out] [get_bd_intf_pins pulse_shaping_filter/S_AXIS_DATA]
+  connect_bd_intf_net -intf_net QPSK_Mod_0_axis_out [get_bd_intf_pins QPSK_Mod_0/axis_out] [get_bd_intf_pins pulse_shaping_filter/S_AXIS_DATA]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXIS_MM2S [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S] [get_bd_intf_pins axis_data_fifo_rftx/S_AXIS]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXI_MM2S [get_bd_intf_pins axi_dma_0/M_AXI_MM2S] [get_bd_intf_pins axi_smc/S00_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXI_S2MM [get_bd_intf_pins axi_dma_0/M_AXI_S2MM] [get_bd_intf_pins axi_smc/S01_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXI_SG [get_bd_intf_pins axi_dma_0/M_AXI_SG] [get_bd_intf_pins axi_smc/S02_AXI]
   connect_bd_intf_net -intf_net axi_smc_M00_AXI [get_bd_intf_pins axi_smc/M00_AXI] [get_bd_intf_pins zynq_ultra_ps_e_0/S_AXI_HPC0_FPD]
   connect_bd_intf_net -intf_net axis_data_fifo_0_M_AXIS [get_bd_intf_pins axis_data_fifo_rftx/M_AXIS] [get_bd_intf_pins axis_dwidth_converter_0/S_AXIS]
-  connect_bd_intf_net -intf_net axis_dwidth_converter_0_M_AXIS [get_bd_intf_pins QPSK_data_converter_0/in] [get_bd_intf_pins axis_dwidth_converter_0/M_AXIS]
+  connect_bd_intf_net -intf_net axis_dwidth_converter_0_M_AXIS [get_bd_intf_pins QPSK_Mod_0/axis_in] [get_bd_intf_pins axis_dwidth_converter_0/M_AXIS]
   connect_bd_intf_net -intf_net dac1_clk_1 [get_bd_intf_ports dac1_clk] [get_bd_intf_pins usp_rf_data_converter_0/dac1_clk]
   connect_bd_intf_net -intf_net fir_compiler_0_M_AXIS_DATA [get_bd_intf_pins pulse_shaping_filter/M_AXIS_DATA] [get_bd_intf_pins usp_rf_data_converter_0/s10_axis]
   connect_bd_intf_net -intf_net ps8_0_axi_periph_M00_AXI [get_bd_intf_pins axi_dma_0/S_AXI_LITE] [get_bd_intf_pins ps8_0_axi_periph/M00_AXI]
@@ -1119,14 +1060,14 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets QPSK_data_converter_0_out] [get_
   connect_bd_net -net axis_data_fifo_0_almost_empty [get_bd_ports almost_empty] [get_bd_pins axis_data_fifo_rftx/almost_empty]
   connect_bd_net -net axis_data_fifo_0_almost_full [get_bd_ports almost_full] [get_bd_pins axis_data_fifo_rftx/almost_full]
   connect_bd_net -net axprot_unsecure_dout [get_bd_pins axprot_unsecure/dout] [get_bd_pins zynq_ultra_ps_e_0/saxigp0_arprot] [get_bd_pins zynq_ultra_ps_e_0/saxigp0_awprot]
-  connect_bd_net -net dac1_clk_wiz_clk_out1 [get_bd_pins QPSK_data_converter_0/clk] [get_bd_pins Repeater_0/clk] [get_bd_pins axis_data_fifo_rftx/m_axis_aclk] [get_bd_pins axis_dwidth_converter_0/aclk] [get_bd_pins dac1_clk_wiz/clk_out1] [get_bd_pins ila_1/clk] [get_bd_pins ila_2/clk] [get_bd_pins pulse_shaping_filter/aclk] [get_bd_pins rst_ps8_25M/slowest_sync_clk] [get_bd_pins usp_rf_data_converter_0/s1_axis_aclk]
+  connect_bd_net -net dac1_clk_wiz_clk_out1 [get_bd_pins QPSK_Mod_0/clk] [get_bd_pins axis_data_fifo_rftx/m_axis_aclk] [get_bd_pins axis_dwidth_converter_0/aclk] [get_bd_pins dac_pll_75M/clk_out1] [get_bd_pins pulse_shaping_filter/aclk] [get_bd_pins rst_ps8_75M/slowest_sync_clk] [get_bd_pins usp_rf_data_converter_0/s1_axis_aclk]
   connect_bd_net -net rst_ps8_0_99M_peripheral_aresetn [get_bd_pins axi_dma_0/axi_resetn] [get_bd_pins axi_smc/aresetn] [get_bd_pins axis_data_fifo_rftx/s_axis_aresetn] [get_bd_pins ps8_0_axi_periph/ARESETN] [get_bd_pins ps8_0_axi_periph/M00_ARESETN] [get_bd_pins ps8_0_axi_periph/M01_ARESETN] [get_bd_pins ps8_0_axi_periph/S00_ARESETN] [get_bd_pins rst_ps8_0_99M/peripheral_aresetn] [get_bd_pins usp_rf_data_converter_0/s_axi_aresetn]
-  connect_bd_net -net rst_ps8_25M_peripheral_aresetn [get_bd_pins axis_dwidth_converter_0/aresetn] [get_bd_pins rst_ps8_25M/peripheral_aresetn] [get_bd_pins usp_rf_data_converter_0/s1_axis_aresetn] [get_bd_pins util_vector_logic_0/Op1]
-  connect_bd_net -net usp_rf_data_converter_0_clk_dac1 [get_bd_pins dac1_clk_wiz/clk_in1] [get_bd_pins usp_rf_data_converter_0/clk_dac1]
-  connect_bd_net -net util_vector_logic_0_Res [get_bd_pins QPSK_data_converter_0/reset] [get_bd_pins Repeater_0/reset] [get_bd_pins util_vector_logic_0/Res]
+  connect_bd_net -net rst_ps8_25M_peripheral_aresetn [get_bd_pins axis_dwidth_converter_0/aresetn] [get_bd_pins rst_ps8_75M/peripheral_aresetn] [get_bd_pins usp_rf_data_converter_0/s1_axis_aresetn] [get_bd_pins util_vector_logic_0/Op1]
+  connect_bd_net -net usp_rf_data_converter_0_clk_dac1 [get_bd_pins dac_pll_75M/clk_in1] [get_bd_pins usp_rf_data_converter_0/clk_dac1]
+  connect_bd_net -net util_vector_logic_0_Res [get_bd_pins QPSK_Mod_0/reset] [get_bd_pins util_vector_logic_0/Res]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps_e_0/pl_ps_irq0]
   connect_bd_net -net zynq_ultra_ps_e_0_pl_clk0 [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/m_axi_sg_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_smc/aclk] [get_bd_pins axis_data_fifo_rftx/s_axis_aclk] [get_bd_pins ps8_0_axi_periph/ACLK] [get_bd_pins ps8_0_axi_periph/M00_ACLK] [get_bd_pins ps8_0_axi_periph/M01_ACLK] [get_bd_pins ps8_0_axi_periph/S00_ACLK] [get_bd_pins rst_ps8_0_99M/slowest_sync_clk] [get_bd_pins usp_rf_data_converter_0/s_axi_aclk] [get_bd_pins zynq_ultra_ps_e_0/maxihpm0_fpd_aclk] [get_bd_pins zynq_ultra_ps_e_0/pl_clk0] [get_bd_pins zynq_ultra_ps_e_0/saxihpc0_fpd_aclk]
-  connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins rst_ps8_0_99M/ext_reset_in] [get_bd_pins rst_ps8_25M/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
+  connect_bd_net -net zynq_ultra_ps_e_0_pl_resetn0 [get_bd_pins rst_ps8_0_99M/ext_reset_in] [get_bd_pins rst_ps8_75M/ext_reset_in] [get_bd_pins zynq_ultra_ps_e_0/pl_resetn0]
 
   # Create address segments
   create_bd_addr_seg -range 0x000800000000 -offset 0x000800000000 [get_bd_addr_spaces axi_dma_0/Data_SG] [get_bd_addr_segs zynq_ultra_ps_e_0/SAXIGP0/HPC0_DDR_HIGH] SEG_zynq_ultra_ps_e_0_HPC0_DDR_HIGH
@@ -1156,6 +1097,7 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets QPSK_data_converter_0_out] [get_
   # Restore current instance
   current_bd_instance $oldCurInst
 
+  validate_bd_design
   save_bd_design
 }
 # End of create_root_design()
@@ -1167,6 +1109,4 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets QPSK_data_converter_0_out] [get_
 
 create_root_design ""
 
-
-common::send_msg_id "BD_TCL-1000" "WARNING" "This Tcl script was generated from a block design that has not been validated. It is possible that design <$design_name> may result in errors during validation."
 
