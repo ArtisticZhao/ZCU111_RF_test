@@ -199,15 +199,26 @@ void tx_thread(struct channel *channel_ptr)
 		/* Initialize the buffer and perform the DMA transfer, check the status after it completes
 		 * as the call blocks til the transfer is done.
 		 */
-
+#define SeqSize 255+4
 		unsigned int *buffer = (unsigned int *)&channel_ptr->buf_ptr[buffer_id].buffer;
+//		printf("offset: %d\n", offset_index);
 		for (i = 0; i < test_size / sizeof(unsigned int); i++){
-			unsigned int res = four_char_to_int(sequence[(offset_index+i*4+3)%255], sequence[(offset_index+i*4+2)%255], sequence[(offset_index+i*4+1)%255], sequence[(offset_index+i*4+0)%255]);
+			unsigned int res = four_char_to_int(
+					sequence[(offset_index+i*4+3)%(SeqSize)],
+					sequence[(offset_index+i*4+2)%(SeqSize)],
+					sequence[(offset_index+i*4+1)%(SeqSize)],
+					sequence[(offset_index+i*4+0)%(SeqSize)]);
 			buffer[i] = res;
+//			printf("%x %x %x %x\n", sequence[(offset_index+i*4+3)%(SeqSize)],
+//					sequence[(offset_index+i*4+2)%(SeqSize)],
+//					sequence[(offset_index+i*4+1)%(SeqSize)],
+//					sequence[(offset_index+i*4+0)%(SeqSize)]);
 		}
 
 
-		offset_index = (offset_index+i*4)%255;
+		offset_index = (offset_index+i*4)%(SeqSize);
+
+
 
 		/* Restart the completed channel buffer to start another transfer and keep
 		 * track of the number of transfers in progress
